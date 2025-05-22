@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import { Pool } from 'pg';
 import cors from 'cors';
-import { initializeRoutes } from '../routes';
+import { initializeRoutes } from './routes';
 
 const app = express();
 
