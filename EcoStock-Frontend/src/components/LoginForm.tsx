@@ -6,10 +6,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import axios from "axios";
+import { API_URL } from "@/config";
 
 const LoginForm = () => {
   const navigate = useNavigate();
-  const [username, setUsername] = useState(""); // Renomeado de 'email' para 'username'
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -18,13 +19,13 @@ const LoginForm = () => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post("http://localhost:3001/api/login", {
-        login: username, // Usando 'username' como 'login' para corresponder ao backend
+      const response = await axios.post(`${API_URL}/api/login`, {
+        login: username,
         senha: password,
       });
       toast.success("Login realizado com sucesso!");
-      localStorage.setItem("user", JSON.stringify(response.data.user)); // Armazenar usuário
-      navigate("/categorias"); // Redirecionar para a página de categorias
+      localStorage.setItem("user", JSON.stringify(response.data.user));
+      navigate("/categorias");
     } catch (error: any) {
       toast.error(error.response?.data?.error || "Falha no login. Verifique suas credenciais.");
     } finally {
@@ -46,7 +47,7 @@ const LoginForm = () => {
             <Label htmlFor="username">Nome de Usuário</Label>
             <Input
               id="username"
-              type="text" // Alterado de 'email' para 'text'
+              type="text"
               placeholder="Digite seu nome de usuário"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
