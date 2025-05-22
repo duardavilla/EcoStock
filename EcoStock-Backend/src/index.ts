@@ -9,6 +9,7 @@ const port = process.env.PORT || 3001;
 
 // Log para verificar a variável de ambiente
 console.log('DATABASE_URL:', process.env.DATABASE_URL);
+console.log('PORT:', process.env.PORT);
 
 // Configuração do banco de dados
 const pool = new Pool({
@@ -22,7 +23,7 @@ const pool = new Pool({
     const client = await pool.connect();
     console.log('Conexão com o banco de dados bem-sucedida');
     client.release();
-  } catch (err: any) { // Tipagem explícita para corrigir erro TS18046
+  } catch (err: any) {
     console.error('Erro ao conectar ao banco de dados:', err.stack);
   }
 })();
@@ -36,5 +37,5 @@ app.use('/', initializeRoutes(pool));
 
 // Iniciar o servidor
 app.listen(port, () => {
-  console.log(`Servidor rodando em http://localhost:${port}`);
+  console.log(`Servidor rodando na porta ${port}`);
 });
