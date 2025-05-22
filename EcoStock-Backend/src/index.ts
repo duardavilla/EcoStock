@@ -7,9 +7,30 @@ import { initializeRoutes } from './routes';
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Log para verificar a variável de ambiente
+// Configuração do CORS para aceitar o domínio do frontend no Vercel
+const allowedOrigins = [
+  'http://localhost:3000', // Para desenvolvimento local
+  process.env.FRONTEND_URL || 'ecostockfinal.vercel.app' // URL do frontend no Vercel
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+app.use(express.json());
+
+// Log para verificar variáveis de ambiente
 console.log('DATABASE_URL:', process.env.DATABASE_URL);
 console.log('PORT:', process.env.PORT);
+console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
 
 // Configuração do banco de dados
 const pool = new Pool({
@@ -27,10 +48,6 @@ const pool = new Pool({
     console.error('Erro ao conectar ao banco de dados:', err.stack);
   }
 })();
-
-// Middleware para CORS e parsing de JSON
-app.use(cors());
-app.use(express.json());
 
 // Inicializar e usar as rotas
 app.use('/', initializeRoutes(pool));
