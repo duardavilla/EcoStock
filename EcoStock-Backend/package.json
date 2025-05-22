@@ -2,11 +2,11 @@
   "name": "ecostock-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/api/index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "node dist/api/index.js",
+    "start": "node dist/index.js",
     "build": "tsc",
-    "dev": "nodemon src/api/index.ts",
+    "dev": "nodemon src/index.ts",
     "test-db": "ts-node src/test-db.ts"
   },
   "dependencies": {
