@@ -10,7 +10,7 @@ const port = process.env.PORT || 3001;
 // Configuração do CORS para aceitar o domínio do frontend no Vercel
 const allowedOrigins = [
   'http://localhost:3000', // Para desenvolvimento local
-  process.env.FRONTEND_URL || 'ecostockfinal.vercel.app' // URL do frontend no Vercel
+  process.env.FRONTEND_URL || 'https://ecostockfinal.vercel.app' // URL do frontend no Vercel
 ];
 
 app.use(cors({
