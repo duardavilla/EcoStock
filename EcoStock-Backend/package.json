@@ -2,27 +2,23 @@
   "name": "ecostock-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/api/index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "node dist/api/index.s",
+    "start": "node dist/index.js",
     "build": "tsc",
-    "dev": "nodemon src/api/index.ts",
+    "dev": "ts-node src/index.ts",
     "test-db": "ts-node src/test-db.ts"
   },
   "dependencies": {
-    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.21.2",
-    "pg": "^8.16.0",
-    "pg-pool": "^3.10.0",
+    "express": "^4.19.2",
+    "pg": "^8.11.5",
     "typescript": "^5.4.5"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.18",
     "@types/express": "^4.17.21",
     "@types/node": "^20.12.7",
     "@types/pg": "^8.11.5",
-    "nodemon": "^3.1.10",
     "ts-node": "^10.9.2"
   }
 }
