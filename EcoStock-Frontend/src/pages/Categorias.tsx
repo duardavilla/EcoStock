@@ -6,6 +6,8 @@ import { PlusIcon, Edit2, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { API_URL } from '@/config';
 
 interface Categoria {
   categoria_id: number;
@@ -22,6 +24,7 @@ const Categorias = () => {
   const [descricao, setDescricao] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Verificar se o usuário está logado
   useEffect(() => {
@@ -37,35 +40,45 @@ const Categorias = () => {
   }, []);
 
   const fetchCategorias = async () => {
+    setIsLoading(true);
     try {
-      const response = await axios.get('http://localhost:3001/api/categorias');
+      const response = await axios.get(`${API_URL}/api/categorias`);
       setCategorias(response.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao buscar categorias:', err);
+      toast.error(err.response?.data?.error || 'Erro ao carregar categorias.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
       if (editingId) {
-        const response = await axios.put(`http://localhost:3001/api/categorias/${editingId}`, {
+        const response = await axios.put(`${API_URL}/api/categorias/${editingId}`, {
           nome,
           descricao,
         });
         setCategorias(categorias.map(cat => (cat.categoria_id === editingId ? response.data : cat)));
+        toast.success('Categoria atualizada com sucesso!');
       } else {
-        const response = await axios.post('http://localhost:3001/api/categorias', {
+        const response = await axios.post(`${API_URL}/api/categorias`, {
           nome,
           descricao,
         });
         setCategorias([...categorias, response.data]);
+        toast.success('Categoria criada com sucesso!');
       }
       setNome('');
       setDescricao('');
       setEditingId(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao salvar categoria:', err);
+      toast.error(err.response?.data?.error || 'Erro ao salvar categoria.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -76,11 +89,16 @@ const Categorias = () => {
   };
 
   const handleDelete = async (id: number) => {
+    setIsLoading(true);
     try {
-      await axios.delete(`http://localhost:3001/api/categorias/${id}`);
+      await axios.delete(`${API_URL}/api/categorias/${id}`);
       setCategorias(categorias.filter(cat => cat.categoria_id !== id));
-    } catch (err) {
+      toast.success('Categoria deletada com sucesso!');
+    } catch (err: any) {
       console.error('Erro ao deletar categoria:', err);
+      toast.error(err.response?.data?.error || 'Erro ao deletar categoria.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -92,7 +110,7 @@ const Categorias = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">Sistema de Categorização</h2>
-        <Button onClick={() => { setNome(''); setDescricao(''); setEditingId(null); }}>
+        <Button onClick={() => { setNome(''); setDescricao(''); setEditingId(null); }} disabled={isLoading}>
           <PlusIcon className="mr-2 h-4 w-4" /> Nova Categoria
         </Button>
       </div>
@@ -110,6 +128,7 @@ const Categorias = () => {
                   placeholder="Buscar categoria..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  disabled={isLoading}
                 />
               </div>
               <div className="rounded-md border">
@@ -123,21 +142,31 @@ const Categorias = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredCategorias.map((categoria) => (
-                      <TableRow key={categoria.categoria_id}>
-                        <TableCell className="font-medium">{categoria.nome}</TableCell>
-                        <TableCell>{categoria.produtos}</TableCell>
-                        <TableCell>{categoria.empresas}</TableCell>
-                        <TableCell className="text-right space-x-1">
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(categoria)}>
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(categoria.categoria_id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center">Carregando...</TableCell>
                       </TableRow>
-                    ))}
+                    ) : filteredCategorias.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center">Nenhuma categoria encontrada</TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredCategorias.map((categoria) => (
+                        <TableRow key={categoria.categoria_id}>
+                          <TableCell className="font-medium">{categoria.nome}</TableCell>
+                          <TableCell>{categoria.produtos}</TableCell>
+                          <TableCell>{categoria.empresas}</TableCell>
+                          <TableCell className="text-right space-x-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(categoria)} disabled={isLoading}>
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(categoria.categoria_id)} disabled={isLoading}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -160,6 +189,8 @@ const Categorias = () => {
                   placeholder="Digite o nome da categoria"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
+                  disabled={isLoading}
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -168,13 +199,21 @@ const Categorias = () => {
                   placeholder="Digite uma descrição para a categoria"
                   value={descricao}
                   onChange={(e) => setDescricao(e.target.value)}
+                  disabled={isLoading}
                 />
               </div>
               <div className="pt-2 flex justify-end space-x-2">
-                <Button variant="outline" type="button" onClick={() => { setNome(''); setDescricao(''); setEditingId(null); }}>
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => { setNome(''); setDescricao(''); setEditingId(null); }}
+                  disabled={isLoading}
+                >
                   Cancelar
                 </Button>
-                <Button type="submit">{editingId ? 'Atualizar' : 'Salvar'} Categoria</Button>
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? 'Salvando...' : editingId ? 'Atualizar' : 'Salvar'} Categoria
+                </Button>
               </div>
             </form>
           </CardContent>

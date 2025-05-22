@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { API_URL } from "@/config";
 
 interface Comunicacao {
   contato_id: number;
@@ -51,6 +53,7 @@ const Comunicacoes = () => {
     tipo: "Mensagem",
   });
   const [errorMessage, setErrorMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   // Verificar se o usuário está logado
   useEffect(() => {
@@ -68,29 +71,41 @@ const Comunicacoes = () => {
   }, []);
 
   const fetchComunicacoes = async () => {
+    setIsLoading(true);
     try {
-      const response = await axios.get("http://localhost:3001/api/comunicacoes");
+      const response = await axios.get(`${API_URL}/api/comunicacoes`);
       setComunicacoes(response.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao buscar comunicações:", err);
+      toast.error(err.response?.data?.error || "Erro ao carregar comunicações.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const fetchEmpresas = async () => {
+    setIsLoading(true);
     try {
-      const response = await axios.get("http://localhost:3001/api/empresas");
+      const response = await axios.get(`${API_URL}/api/empresas`);
       setEmpresas(response.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao buscar empresas:", err);
+      toast.error(err.response?.data?.error || "Erro ao carregar empresas.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const fetchTrocas = async () => {
+    setIsLoading(true);
     try {
-      const response = await axios.get("http://localhost:3001/api/trocas");
+      const response = await axios.get(`${API_URL}/api/trocas`);
       setTrocas(response.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao buscar trocas:", err);
+      toast.error(err.response?.data?.error || "Erro ao carregar trocas.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -99,13 +114,13 @@ const Comunicacoes = () => {
       setErrorMessage("Empresa origem, empresa destino e assunto são obrigatórios.");
       return;
     }
+    setIsLoading(true);
     try {
       const trocaId = formData.troca_id === "nenhuma" ? null : parseInt(formData.troca_id);
-      const response = await axios.post("http://localhost:3001/api/comunicacoes", {
+      const response = await axios.post(`${API_URL}/api/comunicacoes`, {
         ...formData,
         troca_id: trocaId,
       });
-      // Garantir que o novo item tenha todas as propriedades esperadas
       const newComunicacao: Comunicacao = {
         contato_id: response.data.contato_id,
         troca_id: response.data.troca_id,
@@ -119,19 +134,27 @@ const Comunicacoes = () => {
       setIsCreateModalOpen(false);
       setErrorMessage("");
       resetForm();
+      toast.success("Comunicação registrada com sucesso!");
     } catch (err: any) {
       console.error("Erro ao criar comunicação:", err);
       setErrorMessage(err.response?.data?.error || "Erro ao criar comunicação.");
+      toast.error(err.response?.data?.error || "Erro ao criar comunicação.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDetails = async (comunicacao: Comunicacao) => {
+    setIsLoading(true);
     try {
-      const response = await axios.get(`http://localhost:3001/api/comunicacoes/${comunicacao.contato_id}`);
+      const response = await axios.get(`${API_URL}/api/comunicacoes/${comunicacao.contato_id}`);
       setSelectedComunicacao(response.data);
       setIsDetailsModalOpen(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao buscar detalhes da comunicação:", err);
+      toast.error(err.response?.data?.error || "Erro ao carregar detalhes da comunicação.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -149,7 +172,7 @@ const Comunicacoes = () => {
 
   const applyFilters = () => {
     return comunicacoes
-      .filter((comunicacao) => comunicacao && comunicacao.empresa_origem && comunicacao.empresa_destino && comunicacao.assunto) // Verificação de segurança
+      .filter((comunicacao) => comunicacao && comunicacao.empresa_origem && comunicacao.empresa_destino && comunicacao.assunto)
       .filter((comunicacao) => {
         const matchesSearch = (
           (comunicacao.empresa_origem?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
@@ -169,7 +192,7 @@ const Comunicacoes = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">Log de Comunicações</h2>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
+        <Button onClick={() => setIsCreateModalOpen(true)} disabled={isLoading}>
           <MessageSquare className="mr-2 h-4 w-4" /> Registrar Comunicação
         </Button>
       </div>
@@ -188,16 +211,17 @@ const Comunicacoes = () => {
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                disabled={isLoading}
               />
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" onClick={() => setFilterTipo("todos")}>
+              <Button variant="outline" onClick={() => setFilterTipo("todos")} disabled={isLoading}>
                 Todos
               </Button>
-              <Button variant="outline" onClick={() => setFilterTipo("Telefone")}>
+              <Button variant="outline" onClick={() => setFilterTipo("Telefone")} disabled={isLoading}>
                 <Phone className="mr-2 h-4 w-4" /> Chamadas
               </Button>
-              <Button variant="outline" onClick={() => setFilterTipo("Mensagem")}>
+              <Button variant="outline" onClick={() => setFilterTipo("Mensagem")} disabled={isLoading}>
                 <MessageSquare className="mr-2 h-4 w-4" /> Mensagens
               </Button>
             </div>
@@ -216,35 +240,45 @@ const Comunicacoes = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredComunicacoes.map((comunicacao) => (
-                  <TableRow key={comunicacao.contato_id}>
-                    <TableCell>
-                      {comunicacao.duracao ? (
-                        <div className="flex items-center">
-                          <Phone className="mr-2 h-4 w-4 text-primary" /> Chamada
-                        </div>
-                      ) : (
-                        <div className="flex items-center">
-                          <MessageSquare className="mr-2 h-4 w-4 text-primary" /> Mensagem
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{comunicacao.empresa_origem}</p>
-                        <p className="text-xs text-muted-foreground">→ {comunicacao.empresa_destino}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>{comunicacao.assunto}</TableCell>
-                    <TableCell>{new Date(comunicacao.data_contato).toLocaleString('pt-BR')}</TableCell>
-                    <TableCell>{comunicacao.duracao || '-'}</TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button variant="ghost" size="sm" onClick={() => handleDetails(comunicacao)}>
-                        Detalhes
-                      </Button>
-                    </TableCell>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center">Carregando...</TableCell>
                   </TableRow>
-                ))}
+                ) : filteredComunicacoes.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center">Nenhuma comunicação encontrada</TableCell>
+                  </TableRow>
+                ) : (
+                  filteredComunicacoes.map((comunicacao) => (
+                    <TableRow key={comunicacao.contato_id}>
+                      <TableCell>
+                        {comunicacao.duracao ? (
+                          <div className="flex items-center">
+                            <Phone className="mr-2 h-4 w-4 text-primary" /> Chamada
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <MessageSquare className="mr-2 h-4 w-4 text-primary" /> Mensagem
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{comunicacao.empresa_origem}</p>
+                          <p className="text-xs text-muted-foreground">→ {comunicacao.empresa_destino}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>{comunicacao.assunto}</TableCell>
+                      <TableCell>{new Date(comunicacao.data_contato).toLocaleString('pt-BR')}</TableCell>
+                      <TableCell>{comunicacao.duracao || '-'}</TableCell>
+                      <TableCell className="text-right space-x-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleDetails(comunicacao)} disabled={isLoading}>
+                          Detalhes
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
@@ -266,6 +300,7 @@ const Comunicacoes = () => {
               <Select
                 onValueChange={(value) => setFormData({ ...formData, troca_id: value })}
                 value={formData.troca_id}
+                disabled={isLoading}
               >
                 <SelectTrigger id="troca_id">
                   <SelectValue placeholder="Selecione a troca ou nenhuma" />
@@ -285,6 +320,7 @@ const Comunicacoes = () => {
               <Select
                 onValueChange={(value) => setFormData({ ...formData, empresa_origem_id: value })}
                 value={formData.empresa_origem_id}
+                disabled={isLoading}
               >
                 <SelectTrigger id="empresa_origem_id">
                   <SelectValue placeholder="Selecione a empresa origem" />
@@ -303,6 +339,7 @@ const Comunicacoes = () => {
               <Select
                 onValueChange={(value) => setFormData({ ...formData, empresa_destino_id: value })}
                 value={formData.empresa_destino_id}
+                disabled={isLoading}
               >
                 <SelectTrigger id="empresa_destino_id">
                   <SelectValue placeholder="Selecione a empresa destino" />
@@ -323,6 +360,7 @@ const Comunicacoes = () => {
               <Select
                 onValueChange={(value) => setFormData({ ...formData, tipo: value })}
                 value={formData.tipo}
+                disabled={isLoading}
               >
                 <SelectTrigger id="tipo">
                   <SelectValue placeholder="Selecione o tipo" />
@@ -340,6 +378,8 @@ const Comunicacoes = () => {
                 value={formData.assunto}
                 onChange={(e) => setFormData({ ...formData, assunto: e.target.value })}
                 placeholder="Digite o assunto da comunicação"
+                disabled={isLoading}
+                required
               />
             </div>
             <div>
@@ -349,6 +389,8 @@ const Comunicacoes = () => {
                 type="datetime-local"
                 value={formData.data_contato}
                 onChange={(e) => setFormData({ ...formData, data_contato: e.target.value })}
+                disabled={isLoading}
+                required
               />
             </div>
             <div>
@@ -358,14 +400,21 @@ const Comunicacoes = () => {
                 value={formData.duracao}
                 onChange={(e) => setFormData({ ...formData, duracao: e.target.value })}
                 placeholder="Ex.: 15 min (somente para chamadas)"
+                disabled={isLoading || formData.tipo === "Mensagem"}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsCreateModalOpen(false); setErrorMessage(""); }}>
+            <Button
+              variant="outline"
+              onClick={() => { setIsCreateModalOpen(false); setErrorMessage(""); }}
+              disabled={isLoading}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleCreate}>Registrar</Button>
+            <Button onClick={handleCreate} disabled={isLoading}>
+              {isLoading ? "Registrando..." : "Registrar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -389,7 +438,7 @@ const Comunicacoes = () => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailsModalOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDetailsModalOpen(false)} disabled={isLoading}>
               Fechar
             </Button>
           </DialogFooter>

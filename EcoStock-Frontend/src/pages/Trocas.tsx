@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { API_URL } from "@/config";
 
 interface Troca {
   troca_id: number;
@@ -17,8 +19,8 @@ interface Troca {
   data: string;
   status: string;
   observacoes: string | null;
-  categoria_solicitante: string; // Nova propriedade para categoria da solicitante
-  categoria_receptora: string;   // Nova propriedade para categoria da receptora
+  categoria_solicitante: string;
+  categoria_receptora: string;
 }
 
 interface Empresa {
@@ -50,11 +52,12 @@ const Trocas = () => {
     data: "",
     status: "pendente",
     observacoes: "",
-    categoria_solicitante: "", // Novo campo para categoria da solicitante
-    categoria_receptora: "",   // Novo campo para categoria da receptora
+    categoria_solicitante: "",
+    categoria_receptora: "",
   });
   const [statusEdit, setStatusEdit] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   // Verificar se o usuário está logado
   useEffect(() => {
@@ -72,60 +75,94 @@ const Trocas = () => {
   }, []);
 
   const fetchTrocas = async () => {
+    setIsLoading(true);
     try {
-      const response = await axios.get("http://localhost:3001/api/trocas");
+      const response = await axios.get(`${API_URL}/api/trocas`);
       setTrocas(response.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao buscar trocas:", err);
+      toast.error(err.response?.data?.error || "Erro ao carregar trocas.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const fetchEmpresas = async () => {
+    setIsLoading(true);
     try {
-      const response = await axios.get("http://localhost:3001/api/empresas");
+      const response = await axios.get(`${API_URL}/api/empresas`);
       setEmpresas(response.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao buscar empresas:", err);
+      toast.error(err.response?.data?.error || "Erro ao carregar empresas.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const fetchCategorias = async () => {
+    setIsLoading(true);
     try {
-      const response = await axios.get("http://localhost:3001/api/categorias");
+      const response = await axios.get(`${API_URL}/api/categorias`);
       setCategorias(response.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao buscar categorias:", err);
+      toast.error(err.response?.data?.error || "Erro ao carregar categorias.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleCreate = async () => {
-    if (formData.status.length > 50) {
-      setErrorMessage("O status não pode ter mais de 50 caracteres.");
-      return;
+  const validateForm = () => {
+    if (!formData.empresa_solicitante || !formData.empresa_receptora) {
+      setErrorMessage("Empresas solicitante e receptora são obrigatórias.");
+      return false;
     }
     if (!formData.categoria_solicitante || !formData.categoria_receptora) {
       setErrorMessage("As categorias de ambas as empresas são obrigatórias.");
-      return;
+      return false;
     }
+    if (!formData.data) {
+      setErrorMessage("A data da troca é obrigatória.");
+      return false;
+    }
+    if (formData.status.length > 50) {
+      setErrorMessage("O status não pode ter mais de 50 caracteres.");
+      return false;
+    }
+    setErrorMessage("");
+    return true;
+  };
+
+  const handleCreate = async () => {
+    if (!validateForm()) return;
+    setIsLoading(true);
     try {
-      const response = await axios.post("http://localhost:3001/api/trocas", formData);
+      const response = await axios.post(`${API_URL}/api/trocas`, formData);
       setTrocas([...trocas, response.data]);
       setIsCreateModalOpen(false);
-      setErrorMessage("");
       resetForm();
+      toast.success("Troca criada com sucesso!");
     } catch (err: any) {
       console.error("Erro ao criar troca:", err);
       setErrorMessage(err.response?.data?.error || "Erro ao criar troca.");
+      toast.error(err.response?.data?.error || "Erro ao criar troca.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDetails = async (troca: Troca) => {
+    setIsLoading(true);
     try {
-      const response = await axios.get(`http://localhost:3001/api/trocas/${troca.troca_id}`);
+      const response = await axios.get(`${API_URL}/api/trocas/${troca.troca_id}`);
       setSelectedTroca(response.data);
       setIsDetailsModalOpen(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao buscar detalhes da troca:", err);
+      toast.error(err.response?.data?.error || "Erro ao carregar detalhes da troca.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -135,8 +172,13 @@ const Trocas = () => {
       setErrorMessage("O status não pode ter mais de 50 caracteres.");
       return;
     }
+    if (!statusEdit) {
+      setErrorMessage("O status é obrigatório.");
+      return;
+    }
+    setIsLoading(true);
     try {
-      const response = await axios.put(`http://localhost:3001/api/trocas/${selectedTroca.troca_id}`, {
+      const response = await axios.put(`${API_URL}/api/trocas/${selectedTroca.troca_id}`, {
         ...selectedTroca,
         status: statusEdit,
       });
@@ -144,23 +186,32 @@ const Trocas = () => {
       setIsEditStatusModalOpen(false);
       setStatusEdit("");
       setErrorMessage("");
+      toast.success("Status da troca atualizado com sucesso!");
     } catch (err: any) {
       console.error("Erro ao atualizar status:", err);
       setErrorMessage(err.response?.data?.error || "Erro ao atualizar status.");
+      toast.error(err.response?.data?.error || "Erro ao atualizar status.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDelete = async () => {
     if (!selectedTroca) return;
+    setIsLoading(true);
     try {
-      await axios.delete(`http://localhost:3001/api/trocas/${selectedTroca.troca_id}`);
+      await axios.delete(`${API_URL}/api/trocas/${selectedTroca.troca_id}`);
       setTrocas(trocas.filter((t) => t.troca_id !== selectedTroca.troca_id));
       setIsDeleteModalOpen(false);
       setSelectedTroca(null);
       setErrorMessage("");
+      toast.success("Troca excluída com sucesso!");
     } catch (err: any) {
       console.error("Erro ao deletar troca:", err);
       setErrorMessage(err.response?.data?.error || "Erro ao deletar troca.");
+      toast.error(err.response?.data?.error || "Erro ao deletar troca.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -174,6 +225,7 @@ const Trocas = () => {
       categoria_solicitante: "",
       categoria_receptora: "",
     });
+    setErrorMessage("");
   };
 
   const applyFilters = () => {
@@ -192,7 +244,7 @@ const Trocas = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">Sistema de Trocas</h2>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
+        <Button onClick={() => setIsCreateModalOpen(true)} disabled={isLoading}>
           <Plus className="mr-2 h-4 w-4" /> Iniciar Nova Troca
         </Button>
       </div>
@@ -211,6 +263,7 @@ const Trocas = () => {
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                disabled={isLoading}
               />
             </div>
             <div className="flex space-x-2">
@@ -219,6 +272,7 @@ const Trocas = () => {
                 <Select
                   onValueChange={setFilterSolicitante}
                   value={filterSolicitante}
+                  disabled={isLoading}
                 >
                   <SelectTrigger id="filter-solicitante" className="w-[180px]">
                     <SelectValue placeholder="Solicitante" />
@@ -238,6 +292,7 @@ const Trocas = () => {
                 <Select
                   onValueChange={setFilterReceptora}
                   value={filterReceptora}
+                  disabled={isLoading}
                 >
                   <SelectTrigger id="filter-receptora" className="w-[180px]">
                     <SelectValue placeholder="Receptora" />
@@ -252,7 +307,7 @@ const Trocas = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <Button variant="outline" onClick={() => {}}>Filtrar</Button>
+              <Button variant="outline" disabled={isLoading}>Filtrar</Button>
             </div>
           </div>
 
@@ -271,36 +326,56 @@ const Trocas = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTrocas.map((troca) => (
-                  <TableRow key={troca.troca_id}>
-                    <TableCell>#{troca.troca_id}</TableCell>
-                    <TableCell>{troca.empresa_solicitante}</TableCell>
-                    <TableCell>{troca.categoria_solicitante}</TableCell>
-                    <TableCell>{troca.empresa_receptora}</TableCell>
-                    <TableCell>{troca.categoria_receptora}</TableCell>
-                    <TableCell>{new Date(troca.data).toLocaleDateString('pt-BR')}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        troca.status === "Concluída" ? "bg-green-100 text-green-800" :
-                        troca.status === "Em andamento" ? "bg-blue-100 text-blue-800" :
-                        "bg-yellow-100 text-yellow-800"
-                      }`}>
-                        {troca.status}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center space-x-1">
-                      <Button variant="ghost" size="sm" onClick={() => handleDetails(troca)}>
-                        Detalhes
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => { setSelectedTroca(troca); setStatusEdit(troca.status); setIsEditStatusModalOpen(true); }}>
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => { setSelectedTroca(troca); setIsDeleteModalOpen(true); }}>
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </TableCell>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center">Carregando...</TableCell>
                   </TableRow>
-                ))}
+                ) : filteredTrocas.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center">Nenhuma troca encontrada</TableCell>
+                  </TableRow>
+                ) : (
+                  filteredTrocas.map((troca) => (
+                    <TableRow key={troca.troca_id}>
+                      <TableCell>#{troca.troca_id}</TableCell>
+                      <TableCell>{troca.empresa_solicitante}</TableCell>
+                      <TableCell>{troca.categoria_solicitante}</TableCell>
+                      <TableCell>{troca.empresa_receptora}</TableCell>
+                      <TableCell>{troca.categoria_receptora}</TableCell>
+                      <TableCell>{new Date(troca.data).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          troca.status === "Concluída" ? "bg-green-100 text-green-800" :
+                          troca.status === "Em andamento" ? "bg-blue-100 text-blue-800" :
+                          "bg-yellow-100 text-yellow-800"
+                        }`}>
+                          {troca.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center space-x-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleDetails(troca)} disabled={isLoading}>
+                          Detalhes
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => { setSelectedTroca(troca); setStatusEdit(troca.status); setIsEditStatusModalOpen(true); }}
+                          disabled={isLoading}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => { setSelectedTroca(troca); setIsDeleteModalOpen(true); }}
+                          disabled={isLoading}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
@@ -318,10 +393,11 @@ const Trocas = () => {
           )}
           <div className="space-y-4">
             <div>
-              <Label htmlFor="empresa_solicitante">Empresa Solicitante</Label>
+              <Label htmlFor="empresa_solicitante">Empresa Solicitante *</Label>
               <Select
                 onValueChange={(value) => setFormData({ ...formData, empresa_solicitante: value })}
                 value={formData.empresa_solicitante}
+                disabled={isLoading}
               >
                 <SelectTrigger id="empresa_solicitante">
                   <SelectValue placeholder="Selecione a empresa solicitante" />
@@ -336,10 +412,11 @@ const Trocas = () => {
               </Select>
             </div>
             <div>
-              <Label htmlFor="categoria_solicitante">Oferece (Solicitante)</Label>
+              <Label htmlFor="categoria_solicitante">Oferece (Solicitante) *</Label>
               <Select
                 onValueChange={(value) => setFormData({ ...formData, categoria_solicitante: value })}
                 value={formData.categoria_solicitante}
+                disabled={isLoading}
               >
                 <SelectTrigger id="categoria_solicitante">
                   <SelectValue placeholder="Selecione a categoria" />
@@ -354,10 +431,11 @@ const Trocas = () => {
               </Select>
             </div>
             <div>
-              <Label htmlFor="empresa_receptora">Empresa Receptora</Label>
+              <Label htmlFor="empresa_receptora">Empresa Receptora *</Label>
               <Select
                 onValueChange={(value) => setFormData({ ...formData, empresa_receptora: value })}
                 value={formData.empresa_receptora}
+                disabled={isLoading}
               >
                 <SelectTrigger id="empresa_receptora">
                   <SelectValue placeholder="Selecione a empresa receptora" />
@@ -374,10 +452,11 @@ const Trocas = () => {
               </Select>
             </div>
             <div>
-              <Label htmlFor="categoria_receptora">Oferece (Receptora)</Label>
+              <Label htmlFor="categoria_receptora">Oferece (Receptora) *</Label>
               <Select
                 onValueChange={(value) => setFormData({ ...formData, categoria_receptora: value })}
                 value={formData.categoria_receptora}
+                disabled={isLoading}
               >
                 <SelectTrigger id="categoria_receptora">
                   <SelectValue placeholder="Selecione a categoria" />
@@ -392,19 +471,22 @@ const Trocas = () => {
               </Select>
             </div>
             <div>
-              <Label htmlFor="data">Data</Label>
+              <Label htmlFor="data">Data *</Label>
               <Input
                 id="data"
                 type="date"
                 value={formData.data}
                 onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+                disabled={isLoading}
+                required
               />
             </div>
             <div>
-              <Label htmlFor="status">Status</Label>
+              <Label htmlFor="status">Status *</Label>
               <Select
                 onValueChange={(value) => setFormData({ ...formData, status: value })}
                 value={formData.status}
+                disabled={isLoading}
               >
                 <SelectTrigger id="status">
                   <SelectValue placeholder="Selecione o status" />
@@ -424,14 +506,21 @@ const Trocas = () => {
                 value={formData.observacoes}
                 onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
                 placeholder="Digite observações (opcional)"
+                disabled={isLoading}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsCreateModalOpen(false); setErrorMessage(""); }}>
+            <Button
+              variant="outline"
+              onClick={() => { setIsCreateModalOpen(false); resetForm(); }}
+              disabled={isLoading}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleCreate}>Criar</Button>
+            <Button onClick={handleCreate} disabled={isLoading}>
+              {isLoading ? "Criando..." : "Criar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -455,7 +544,7 @@ const Trocas = () => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailsModalOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDetailsModalOpen(false)} disabled={isLoading}>
               Fechar
             </Button>
           </DialogFooter>
@@ -475,10 +564,11 @@ const Trocas = () => {
             <div className="space-y-4">
               <p><strong>Troca:</strong> {selectedTroca.empresa_solicitante} → {selectedTroca.empresa_receptora}</p>
               <div>
-                <Label htmlFor="status">Novo Status</Label>
+                <Label htmlFor="status">Novo Status *</Label>
                 <Select
                   onValueChange={(value) => setStatusEdit(value)}
                   value={statusEdit}
+                  disabled={isLoading}
                 >
                   <SelectTrigger id="status">
                     <SelectValue placeholder="Selecione o status" />
@@ -494,10 +584,16 @@ const Trocas = () => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsEditStatusModalOpen(false); setErrorMessage(""); }}>
+            <Button
+              variant="outline"
+              onClick={() => { setIsEditStatusModalOpen(false); setErrorMessage(""); }}
+              disabled={isLoading}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleEditStatus}>Salvar</Button>
+            <Button onClick={handleEditStatus} disabled={isLoading}>
+              {isLoading ? "Salvando..." : "Salvar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -515,11 +611,15 @@ const Trocas = () => {
             <p className="text-red-500 text-sm">{errorMessage}</p>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsDeleteModalOpen(false); setErrorMessage(""); }}>
+            <Button
+              variant="outline"
+              onClick={() => { setIsDeleteModalOpen(false); setErrorMessage(""); }}
+              disabled={isLoading}
+            >
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Excluir
+            <Button variant="destructive" onClick={handleDelete} disabled={isLoading}>
+              {isLoading ? "Excluindo..." : "Excluir"}
             </Button>
           </DialogFooter>
         </DialogContent>

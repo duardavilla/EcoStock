@@ -4,6 +4,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Building2, ArrowRightLeft, Package, Tags } from "lucide-react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { API_URL } from "@/config";
 
 interface Categoria {
   categoria_id: number;
@@ -42,6 +44,7 @@ const Dashboard = () => {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [trocas, setTrocas] = useState<Troca[]>([]);
   const [totalProdutos, setTotalProdutos] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Função para obter a saudação com base no horário de São Paulo
   const getSaudacao = () => {
@@ -78,8 +81,9 @@ const Dashboard = () => {
   }, []);
 
   const fetchCategorias = async () => {
+    setIsLoading(true);
     try {
-      const response = await axios.get("http://localhost:3001/api/categorias");
+      const response = await axios.get(`${API_URL}/api/categorias`);
       console.log("Dados de categorias:", response.data);
       setCategorias(response.data);
       const total = response.data.reduce((sum, cat) => {
@@ -87,28 +91,39 @@ const Dashboard = () => {
         return sum + produtos;
       }, 0);
       setTotalProdutos(total);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao buscar categorias:", err);
+      toast.error(err.response?.data?.error || "Erro ao carregar categorias.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const fetchEmpresas = async () => {
+    setIsLoading(true);
     try {
-      const response = await axios.get("http://localhost:3001/api/empresas");
+      const response = await axios.get(`${API_URL}/api/empresas`);
       console.log("Dados de empresas:", response.data);
       setEmpresas(response.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao buscar empresas:", err);
+      toast.error(err.response?.data?.error || "Erro ao carregar empresas.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const fetchTrocas = async () => {
+    setIsLoading(true);
     try {
-      const response = await axios.get("http://localhost:3001/api/trocas");
+      const response = await axios.get(`${API_URL}/api/trocas`);
       console.log("Dados de trocas:", response.data);
       setTrocas(response.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao buscar trocas:", err);
+      toast.error(err.response?.data?.error || "Erro ao carregar trocas.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -163,7 +178,7 @@ const Dashboard = () => {
               <div className="p-2 bg-primary/10 rounded-full">{card.icon}</div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{card.value}</div>
+              <div className="text-2xl font-bold">{isLoading ? "..." : card.value}</div>
               <p className="text-xs text-muted-foreground">{card.description}</p>
             </CardContent>
           </Card>
@@ -188,27 +203,37 @@ const Dashboard = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {trocasAtivas.map((troca) => (
-                  <TableRow key={troca.troca_id}>
-                    <TableCell className="font-medium">
-                      {troca.empresa_solicitante} ↔ {troca.empresa_receptora}
-                    </TableCell>
-                    <TableCell>{troca.categoria_solicitante}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          troca.status === "Concluída"
-                            ? "bg-green-100 text-green-800"
-                            : troca.status === "pendente" || troca.status === "Em andamento" || troca.status === "ativa"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {troca.status}
-                      </span>
-                    </TableCell>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center">Carregando...</TableCell>
                   </TableRow>
-                ))}
+                ) : trocasAtivas.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center">Nenhuma troca ativa encontrada</TableCell>
+                  </TableRow>
+                ) : (
+                  trocasAtivas.map((troca) => (
+                    <TableRow key={troca.troca_id}>
+                      <TableCell className="font-medium">
+                        {troca.empresa_solicitante} ↔ {troca.empresa_receptora}
+                      </TableCell>
+                      <TableCell>{troca.categoria_solicitante}</TableCell>
+                      <TableCell>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs ${
+                            troca.status === "Concluída"
+                              ? "bg-green-100 text-green-800"
+                              : troca.status === "pendente" || troca.status === "Em andamento" || troca.status === "ativa"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {troca.status}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -230,13 +255,23 @@ const Dashboard = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {categorias.map((categoria) => (
-                  <TableRow key={categoria.categoria_id}>
-                    <TableCell className="font-medium">{categoria.nome}</TableCell>
-                    <TableCell>{categoria.empresas}</TableCell>
-                    <TableCell>{parseInt(categoria.produtos, 10) || 0}</TableCell>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center">Carregando...</TableCell>
                   </TableRow>
-                ))}
+                ) : categorias.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center">Nenhuma categoria encontrada</TableCell>
+                  </TableRow>
+                ) : (
+                  categorias.map((categoria) => (
+                    <TableRow key={categoria.categoria_id}>
+                      <TableCell className="font-medium">{categoria.nome}</TableCell>
+                      <TableCell>{categoria.empresas}</TableCell>
+                      <TableCell>{parseInt(categoria.produtos, 10) || 0}</TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
