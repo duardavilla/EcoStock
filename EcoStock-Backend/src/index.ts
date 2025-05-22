@@ -7,30 +7,44 @@ import { initializeRoutes } from './routes';
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Configuração do CORS para aceitar o domínio do frontend no Vercel
+// Configuração do CORS
 const allowedOrigins = [
-  'http://localhost:3000', // Para desenvolvimento local
-  process.env.FRONTEND_URL || 'https://ecostockfinal.vercel.app' // URL do frontend no Vercel
-];
+  'http://localhost:3000', // Desenvolvimento local
+  'https://ecostockfinal.vercel.app', // Frontend no Vercel
+  process.env.FRONTEND_URL, // Variável de ambiente
+].filter(Boolean); // Remove valores undefined ou vazios
 
 app.use(cors({
   origin: (origin, callback) => {
+    console.log('Origem recebida:', origin); // Log para depuração
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.error('Origem não permitida:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true, // Suporte a credenciais, se necessário
 }));
+
+// Lidar com requisições OPTIONS (preflight)
+app.options('*', cors());
+
+// Middleware para log de requisições
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} from ${req.get('Origin')}`);
+  next();
+});
 
 app.use(express.json());
 
-// Log para verificar variáveis de ambiente
+// Log de variáveis de ambiente
 console.log('DATABASE_URL:', process.env.DATABASE_URL);
 console.log('PORT:', process.env.PORT);
 console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
+console.log('Allowed Origins:', allowedOrigins);
 
 // Configuração do banco de dados
 const pool = new Pool({
@@ -38,7 +52,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Testar a conexão com o banco de dados
+// Testar conexão com o banco de dados
 (async () => {
   try {
     const client = await pool.connect();
@@ -49,7 +63,7 @@ const pool = new Pool({
   }
 })();
 
-// Inicializar e usar as rotas
+// Inicializar rotas
 app.use('/', initializeRoutes(pool));
 
 // Iniciar o servidor
